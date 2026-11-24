@@ -1,4 +1,6 @@
-const BASE = "";
+// In production, set VITE_API_BASE (e.g. https://bountea-backend.onrender.com).
+// In dev, leave empty so Vite's proxy (/api -> localhost:4021) is used.
+const BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {

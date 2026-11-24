@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: bountea-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: STELLAR_NETWORK
+        value: stellar:testnet
+      - key: FACILITATOR_URL
+        value: https://x402.org/facilitator
+      - key: SPENDING_CAP_USDC
+        value: "12"
+      - key: STELLAR_RECIPIENT
+        sync: false
+      - key: STELLAR_RECIPIENT_SECRET
+        sync: false
+      - key: STELLAR_SECRET_KEY
+        sync: false
+      - key: STELLAR_PAYER_PUBLIC
+        sync: false

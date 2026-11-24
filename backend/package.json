@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "BOUNTEA backend: protected deliverable endpoint settled via Stellar x402 (testnet).",
   "type": "module",
+  "engines": { "node": ">=20" },
   "scripts": {
     "setup": "node setup.js",
     "dev": "node server.js",

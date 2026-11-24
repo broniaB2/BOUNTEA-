@@ -1,0 +1,34 @@
+# BOUNTEA — dependencies, build output, secrets and local artifacts
+
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build output
+dist/
+build/
+dist-ssr/
+
+# Secrets / environment (keep example files tracked)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Caches / test output
+coverage/
+*.tsbuildinfo
+.cache/
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.local

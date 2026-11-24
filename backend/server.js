@@ -128,6 +128,7 @@ app.use(cors());
 app.use(express.json());
 
 // Health / config
+app.get("/", (_req, res) => res.json({ ok: true, service: "bountea-backend", network: NETWORK }));
 app.get("/api/health", (_req, res) => res.json({ ok: true, network: NETWORK }));
 app.get("/api/config", (_req, res) =>
   res.json({ spendingCap: SPENDING_CAP, network: NETWORK, facilitator: FACILITATOR_URL })
@@ -358,7 +359,7 @@ app.get("/deliverable/:id", x402Middleware, (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`BOUNTEA backend on http://localhost:${PORT} (${NETWORK})`);
+  console.log(`BOUNTEA backend listening on port ${PORT} (${NETWORK})`);
   console.log(`Recipient (payTo): ${PAY_TO || "(not configured)"}`);
   if (!PAY_TO) console.warn("⚠ STELLAR_RECIPIENT not configured — paid routes return 503");
 });

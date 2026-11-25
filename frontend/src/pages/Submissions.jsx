@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { reviewSubmission } from "../services/agentService";
 import {
   CheckCircle2,
   ExternalLink,
@@ -278,43 +279,43 @@ function Submissions({
     (bounty) => String(bounty.id) === String(selectedSubmission?.bountyId),
   );
 
-  // Client agent: auto-approve within cap when enabled. Real x402 settlement is
-  // required — never auto-approve through the offline mock fallback.
+  // Client agent: review against the brief + cap, then approve and pay.
+  // Real x402 settlement is required — never auto-approve through the offline mock fallback.
   useEffect(() => {
     if (!autoApprove || !backendOnline || !onApproveAndPay) return;
     scopedSubmissions
-      .filter((s) => s.status === "SUBMITTED" && !processedRef.current.has(s.id))
+      .filter((s) => s.status === "SUBMITTED")
       .forEach((submission) => {
         const bounty = bounties.find(
           (b) => String(b.id) === String(submission.bountyId),
         );
-        const reward = Number(bounty?.reward || submission.reward || 0);
-        const withinCap = !spendingCap || reward <= spendingCap;
-        const previewOk = !!(
-          submission.description ||
-          submission.notes ||
-          submission.deliveryLink ||
-          submission.title
-        );
+        // Key includes the preview content so a human-edited resubmission is re-reviewed.
+        const key = `${submission.id}|${submission.description || ""}|${submission.status}`;
+        if (processedRef.current.has(key)) return;
+        processedRef.current.add(key);
 
-        processedRef.current.add(submission.id);
+        const review = reviewSubmission({ bounty, submission, spendingCap });
 
-        if (!withinCap) {
+        if (!review.withinCap) {
           setAgentLog((prev) => [
-            `⚠ Client agent: "${submission.title}" exceeds cap (${reward} > ${spendingCap} USDC) — human intervention required.`,
+            `⚠ Client agent held "${submission.title}": ${review.reasons.join("; ")} — human intervention required.`,
             ...prev,
           ]);
           return;
         }
-        if (!previewOk) {
+        if (!review.approved) {
           setAgentLog((prev) => [
-            `ℹ Client agent: "${submission.title}" needs human review (empty preview).`,
+            `✗ Client agent did not approve "${submission.title}": ${review.reasons.join("; ")} — human review needed.`,
             ...prev,
           ]);
           return;
         }
+
+        const criteriaSummary = review.checks
+          ? ` (${review.passed}/${review.checks} acceptance checks passed)`
+          : "";
         setAgentLog((prev) => [
-          `🤖 Client agent approved "${submission.title}" (reward ${reward} ≤ cap ${spendingCap}, preview OK) — settling x402 payment…`,
+          `✓ Client agent reviewed "${submission.title}"${criteriaSummary} — reward ${bounty.reward} ≤ ${spendingCap} cap. Settling x402 payment…`,
           ...prev,
         ]);
         onApproveAndPay(submission.id)
@@ -388,10 +389,10 @@ function Submissions({
             onChange={(e) => setAutoApprove(e.target.checked)}
           />
           <span>
-            <strong>Client agent auto-approve</strong> — automatically approve &
-            settle real x402 payments for submissions within the {spendingCap} USDC
-            cap when the preview passes review. Above-cap tasks and offline
-            backends require human intervention.
+            <strong>Client agent auto-approve</strong> — reviews each preview against
+            the task's acceptance criteria, then approves and settles a real x402
+            payment when the reward is within the {spendingCap} USDC cap. Above-cap
+            tasks, failed reviews and offline backends require human intervention.
           </span>
         </label>
         {agentLog.length > 0 && (

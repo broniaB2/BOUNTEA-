@@ -47,6 +47,11 @@ export const api = {
         skills: [form.category],
       }),
     }),
+  generateAgentWork: (id) =>
+    request("/api/agent/generate-work", {
+      method: "POST",
+      body: JSON.stringify({ taskId: id }),
+    }),
   claimTask: (id, worker) =>
     request(`/api/tasks/${id}/claim`, {
       method: "POST",

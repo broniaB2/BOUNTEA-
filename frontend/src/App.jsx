@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "./services/api";
+import { buildAgentDeliverable } from "./services/agentService";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import GuestRoute from "./components/auth/GuestRoute";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -116,6 +117,90 @@ function App() {
       }).catch(() => {});
     }
     return result;
+  }
+
+  // Worker agent: after the human's go-ahead, claim → do the work → submit for review.
+  async function runWorkerAgent(id) {
+    const bounty = bounties.find((item) => String(item.id) === String(id));
+    if (!bounty) return { success: false, error: "Task not found." };
+    if (bounty.status !== "OPEN") {
+      return { success: false, error: "This task is no longer open." };
+    }
+
+    const worker = user?.name || "worker-agent";
+    let current = { ...bounty, status: "CLAIMED", claimedBy: worker };
+
+    if (backendOnline) {
+      try {
+        const claimed = await api.claimTask(id, worker);
+        if (claimed && claimed.id) current = claimed;
+      } catch (error) {
+        return { success: false, error: error.message || "Could not claim task." };
+      }
+    }
+
+    const started = startMockTask([current], id);
+    if (started.success) current = started.bounty;
+
+    // Ask the server-side worker agent (Gemini) to do the work. Fall back to the
+    // offline draft if Gemini is unavailable — never block the demo on it.
+    let deliverable = buildAgentDeliverable(current);
+    let source = "Offline draft agent";
+    if (backendOnline) {
+      try {
+        const generated = await api.generateAgentWork(id);
+        if (generated?.deliverable) {
+          deliverable = generated.deliverable;
+          source = "Gemini worker agent";
+        }
+      } catch {
+        // Gemini unavailable — keep the structured draft.
+      }
+    }
+    deliverable = {
+      ...deliverable,
+      notes: `${deliverable.notes || ""} [${source}]`.trim(),
+    };
+
+    const submitted = submitMockWork([current], id, deliverable);
+    if (!submitted.success) return submitted;
+    current = submitted.bounty;
+
+    setBounties((previous) =>
+      previous.map((item) => (String(item.id) === String(id) ? current : item)),
+    );
+    setSubmissions((previous) => [...previous, submitted.submission]);
+
+    if (backendOnline) {
+      try {
+        const updated = await api.submitPreview(id, { ...deliverable, worker });
+        if (updated && updated.id) {
+          setBounties((previous) =>
+            previous.map((item) =>
+              String(item.id) === String(id) ? updated : item,
+            ),
+          );
+          if (updated.submission) {
+            setSubmissions((previous) => {
+              const exists = previous.some(
+                (item) => String(item.bountyId) === String(id),
+              );
+              return exists
+                ? previous.map((item) =>
+                    String(item.bountyId) === String(id)
+                      ? updated.submission
+                      : item,
+                  )
+                : [...previous, updated.submission];
+            });
+          }
+        }
+      } catch (error) {
+        return { success: false, error: error.message || "Could not submit work." };
+      }
+    }
+
+    return { success: true, submission: submitted.submission };
   }
 
   function startTask(id) {
@@ -319,7 +404,7 @@ function App() {
     onSearchChange: setSearch,
     onCategoryChange: setCategory,
     onCreateBounty: () => setShowModal(true),
-    onClaimBounty: claimBounty,
+    onRunWorkerAgent: runWorkerAgent,
     user,
   };
 

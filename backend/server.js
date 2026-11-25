@@ -13,6 +13,7 @@ import { ExactStellarScheme } from "@x402/stellar/exact/server";
 import { wrapFetchWithPaymentFromConfig } from "@x402/fetch";
 import { createEd25519Signer } from "@x402/stellar";
 import { ExactStellarScheme as ExactStellarClientScheme } from "@x402/stellar/exact/client";
+import { generateDeliverable, geminiConfigured } from "./geminiAgent.js";
 
 const NETWORK = process.env.STELLAR_NETWORK || "stellar:testnet";
 const PORT = process.env.PORT || 4021;
@@ -131,7 +132,12 @@ app.use(express.json());
 app.get("/", (_req, res) => res.json({ ok: true, service: "bountea-backend", network: NETWORK }));
 app.get("/api/health", (_req, res) => res.json({ ok: true, network: NETWORK }));
 app.get("/api/config", (_req, res) =>
-  res.json({ spendingCap: SPENDING_CAP, network: NETWORK, facilitator: FACILITATOR_URL })
+  res.json({
+    spendingCap: SPENDING_CAP,
+    network: NETWORK,
+    facilitator: FACILITATOR_URL,
+    workerAgent: geminiConfigured() ? "gemini" : "draft",
+  })
 );
 
 // Tasks
@@ -141,6 +147,21 @@ app.get("/api/tasks/:id", (req, res) => {
   if (!t) return res.status(404).json({ error: "not found" });
   res.json(t);
 });
+// Worker agent: Gemini generates the actual deliverable for a task (server-side key).
+app.post("/api/agent/generate-work", async (req, res) => {
+  const t = getTask(req.body?.taskId || req.body?.id);
+  if (!t) return res.status(404).json({ error: "not found" });
+  if (!geminiConfigured()) {
+    return res.status(503).json({ error: "Gemini is not configured on the backend" });
+  }
+  try {
+    const generated = await generateDeliverable(t);
+    res.json({ deliverable: generated.deliverable, mode: "gemini", model: generated.model });
+  } catch (error) {
+    res.status(502).json({ error: "work generation failed", detail: String(error) });
+  }
+});
+
 app.post("/api/tasks", (req, res) => {
   const body = req.body || {};
   const { title, description, category, reward, deadline, business, acceptanceCriteria } = body;

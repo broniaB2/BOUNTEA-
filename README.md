@@ -88,6 +88,7 @@ fees, so clients need **zero XLM**.
 BOUNTEA/
 ├── backend/                  ← Express + x402 seller + client agent
 │   ├── server.js             ← protected deliverable endpoint, tasks/submissions/receipts API
+│   ├── geminiAgent.js        ← worker agent deliverable generation (Gemini, server-side key)
 │   ├── setup.js              ← one-time testnet account setup (keypairs, friendbot, trustlines)
 │   └── .env                  ← Stellar keys, facilitator URL, spending cap (gitignored)
 ├── frontend/                 ← React 19 + Vite (the UI)
@@ -183,6 +184,7 @@ cd frontend && npm run lint && npm run build
 | GET | `/api/health` | Liveness + network |
 | GET | `/api/config` | Spending cap, network, facilitator |
 | GET | `/api/tasks` | List tasks (with embedded `submission`) |
+| POST | `/api/agent/generate-work` | Gemini writes the worker agent's deliverable (server-side key) |
 | GET | `/api/tasks/:id` | One task |
 | POST | `/api/tasks` | Create bounty (rejects reward > cap) |
 | POST | `/api/tasks/:id/claim` | Claim (worker) |
@@ -204,7 +206,14 @@ STELLAR_RECIPIENT_SECRET=S...
 STELLAR_SECRET_KEY=S...       # client agent / payer (signs & pays)
 STELLAR_PAYER_PUBLIC=G...
 SPENDING_CAP_USDC=12
+GEMINI_API_KEY=AIza...        # worker agent content generation (server-side only)
+GEMINI_MODEL=gemini-3.5-flash # optional; defaults to gemini-3.5-flash
 ```
+
+The Gemini key is read only by `backend/geminiAgent.js` and is never sent to the
+browser. `GET /api/config` reports `workerAgent: "gemini" | "draft"` so the UI knows
+which mode is active. If the key is missing or the API fails, the worker agent falls
+back to a structured draft built from the brief.
 
 ## 11. Deploying (live)
 
@@ -219,7 +228,8 @@ instances. Configuration used:
   - Root directory `backend`, build `npm install`, start `npm start`.
   - Node pinned to 20 via `backend/.node-version` + `engines`.
   - Health check path `/api/health`; root `GET /` returns service info.
-  - Env vars from `backend/.env` set in the Render dashboard (never committed).
+  - Env vars from `backend/.env` set in the Render dashboard (never committed),
+    including `GEMINI_API_KEY` for the worker agent.
 - **Note:** Render's free tier sleeps after ~15 min idle; the first request after
   sleep takes ~30 s. Hit `/api/health` before a demo. Local dev still works with
   `VITE_API_BASE` unset (Vite proxies `/api` → `http://localhost:4021`).
@@ -233,13 +243,21 @@ instances. Configuration used:
 - **Worker skills at signup** — workers pick skills (translation, Luganda, data entry,
   Excel, research, content writing, …), stored in the mock profile.
 - **Skill-based matching** — the worker dashboard shows **Worker agent suggestions**:
-  open bounties whose skills/category match the worker's skills, with a **Give go-ahead**
-  button that claims the task. The human stays in the loop before the agent acts.
+  open bounties whose skills/category match the worker's skills.
+- **Worker agent completes the work with Gemini** — after **Give go-ahead**, the agent
+  claims the task, calls `POST /api/agent/generate-work` so Gemini writes the actual
+  deliverable from the brief + acceptance criteria, and submits it for review. The
+  human stays in the loop before the agent acts; the result appears in
+  **My Tasks → Submitted**. Without a key it falls back to a structured draft.
 - **Review instructions** — businesses add explicit acceptance criteria when posting a
   bounty; those instructions are shown in the client review panel.
-- **Client agent auto-approve** — a toggle on **Submissions** lets the agent approve and
-  settle **real x402 payments** automatically for submissions with reward ≤ 12 USDC and a
-  non-empty preview. Decisions and payment results appear in an **agent log**.
+- **Client agent reviews, then pays** — a toggle on **Submissions** makes the agent
+  check each preview against the acceptance criteria, then approve and settle a **real
+  x402 payment** when the reward is ≤ 12 USDC. Decisions, check results and payment
+  outcomes appear in an **agent log**.
+- `buildAgentDeliverable()` in `frontend/src/services/agentService.js` remains the
+  offline fallback only; with `GEMINI_API_KEY` set on the backend, Gemini produces the
+  real content and the claim → submit → review → pay flow is unchanged.
 - **Safety rails** — above-cap submissions are skipped with a warning requiring human
   intervention; when the backend is offline the agent does **not** auto-approve, so it can
   never produce a mock/simulated payment. Manual review buttons remain available.

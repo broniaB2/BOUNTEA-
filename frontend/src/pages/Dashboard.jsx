@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ArrowUpRight,
   BriefcaseBusiness,
@@ -78,11 +79,22 @@ function Dashboard({
   onSearchChange,
   onCategoryChange,
   onCreateBounty,
-  onClaimBounty,
+  onRunWorkerAgent,
   user,
   showBusinessActions,
 }) {
   const isBusiness = user?.role === "business";
+  const [workingId, setWorkingId] = useState(null);
+
+  async function handleGoAhead(id) {
+    if (!onRunWorkerAgent) return;
+    setWorkingId(id);
+    try {
+      await onRunWorkerAgent(id);
+    } finally {
+      setWorkingId(null);
+    }
+  }
 
   // A bounty belongs to a business if created by them (email) OR posted under their name.
   const ownsBounty = (bounty) =>
@@ -176,8 +188,8 @@ function Dashboard({
               <h2>Worker agent suggestions</h2>
               <p>
                 Your agent scanned open bounties and found tasks matching your skills:{" "}
-                {user.skills.join(", ")}. Give the go-ahead and the agent will claim
-                the task for you.
+                {user.skills.join(", ")}. Give the go-ahead and the agent will complete
+                the work and submit it for review.
               </p>
             </div>
           </div>
@@ -198,9 +210,10 @@ function Dashboard({
                   <button
                     type="button"
                     className="primary-button"
-                    onClick={() => onClaimBounty && onClaimBounty(bounty.id)}
+                    disabled={workingId !== null}
+                    onClick={() => handleGoAhead(bounty.id)}
                   >
-                    Give go-ahead
+                    {workingId === bounty.id ? "Agent working…" : "Give go-ahead"}
                   </button>
                 </div>
               ))}

@@ -8,6 +8,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { BountyExplorer } from "./Marketplace";
+import { suggestedBountiesForWorker } from "../services/bountyService";
 
 function StatCard({ icon: Icon, tone, label, value, description }) {
   return (
@@ -77,6 +78,7 @@ function Dashboard({
   onSearchChange,
   onCategoryChange,
   onCreateBounty,
+  onClaimBounty,
   user,
   showBusinessActions,
 }) {
@@ -165,6 +167,48 @@ function Dashboard({
       </section>
 
       {showBusinessActions && <HeroBanner onCreateBounty={onCreateBounty} />}
+
+      {!isBusiness && user?.skills?.length ? (
+        <section className="agent-suggestions">
+          <div className="agent-suggestions-header">
+            <Sparkles size={18} />
+            <div>
+              <h2>Worker agent suggestions</h2>
+              <p>
+                Your agent scanned open bounties and found tasks matching your skills:{" "}
+                {user.skills.join(", ")}. Give the go-ahead and the agent will claim
+                the task for you.
+              </p>
+            </div>
+          </div>
+          {suggestedBountiesForWorker(bounties, user).length === 0 ? (
+            <p className="empty-state">No matching open bounties right now.</p>
+          ) : (
+            <div className="suggestion-list">
+              {suggestedBountiesForWorker(bounties, user).map((bounty) => (
+                <div key={bounty.id} className="suggestion-card">
+                  <div>
+                    <strong>{bounty.title}</strong>
+                    <p>{bounty.description}</p>
+                    <span className="suggestion-meta">
+                      {bounty.reward} USDC · {bounty.business} · skills:{" "}
+                      {(bounty.skills || []).join(", ")}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() => onClaimBounty && onClaimBounty(bounty.id)}
+                  >
+                    Give go-ahead
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
       <BountyExplorer
         bounties={
           isBusiness

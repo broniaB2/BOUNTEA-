@@ -56,6 +56,7 @@ function toProfile(user) {
     name: user.name,
     email: user.email,
     role: user.role,
+    skills: Array.isArray(user.skills) ? user.skills : [],
   };
 }
 
@@ -73,7 +74,7 @@ function saveSession(profile) {
   return profile;
 }
 
-export function mockSignUp({ name, email, password, role }) {
+export function mockSignUp({ name, email, password, role, skills }) {
   const normalizedEmail = normalizeEmail(email);
 
   if (!name.trim() || !isValidEmail(normalizedEmail) || password.length < 8) {
@@ -94,6 +95,7 @@ export function mockSignUp({ name, email, password, role }) {
     email: normalizedEmail,
     password,
     role,
+    skills: Array.isArray(skills) ? skills : [],
   };
   mockUsers.set(normalizedEmail, user);
   persistUsers();

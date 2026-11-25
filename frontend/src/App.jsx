@@ -319,6 +319,7 @@ function App() {
     onSearchChange: setSearch,
     onCategoryChange: setCategory,
     onCreateBounty: () => setShowModal(true),
+    onClaimBounty: claimBounty,
     user,
   };
 

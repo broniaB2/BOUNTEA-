@@ -43,6 +43,8 @@ export const api = {
         deadline: form.deadline,
         business: user?.name || "Your Business",
         createdBy: user?.email || user?.name || "demo@bountea.app",
+        acceptanceCriteria: form.acceptanceCriteria || "",
+        skills: [form.category],
       }),
     }),
   claimTask: (id, worker) =>

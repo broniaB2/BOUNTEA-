@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   ExternalLink,
@@ -142,6 +142,18 @@ function SubmissionDetails({
           </div>
         )}
       </div>
+      {bounty?.acceptanceCriteria && (
+        <div className="review-instructions">
+          <strong>Client agent review instructions</strong>
+          <p>{bounty.acceptanceCriteria}</p>
+        </div>
+      )}
+      {!withinCap && (
+        <div className="cap-warning">
+          ⚠ Reward exceeds the spending cap ({spendingCap} USDC) — human intervention
+          required. Auto-approve is disabled for this submission.
+        </div>
+      )}
       {canReview && (
         <div className="review-actions">
           <div className="cap-check">
@@ -215,6 +227,7 @@ function Submissions({
   submissions,
   user,
   spendingCap,
+  backendOnline,
   onApproveSubmission,
   onApproveAndPay,
   onRequestRevision,
@@ -222,6 +235,15 @@ function Submissions({
   const [activeFilter, setActiveFilter] = useState("ALL");
   const [selectedId, setSelectedId] = useState(null);
   const [notice, setNotice] = useState("");
+  const [autoApprove, setAutoApprove] = useState(() => {
+    try {
+      return window.localStorage.getItem("bountea.autoApprove") !== "false";
+    } catch {
+      return true;
+    }
+  });
+  const [agentLog, setAgentLog] = useState([]);
+  const processedRef = useRef(new Set());
   const ownedBountyIds = new Set(
     bounties
       .filter(
@@ -241,12 +263,82 @@ function Submissions({
       ),
     [scopedSubmissions, activeFilter],
   );
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("bountea.autoApprove", String(autoApprove));
+    } catch {
+      // ignore
+    }
+  }, [autoApprove]);
+
   const selectedSubmission = scopedSubmissions.find(
     (item) => item.id === selectedId,
   );
   const selectedBounty = bounties.find(
     (bounty) => String(bounty.id) === String(selectedSubmission?.bountyId),
   );
+
+  // Client agent: auto-approve within cap when enabled. Real x402 settlement is
+  // required — never auto-approve through the offline mock fallback.
+  useEffect(() => {
+    if (!autoApprove || !backendOnline || !onApproveAndPay) return;
+    scopedSubmissions
+      .filter((s) => s.status === "SUBMITTED" && !processedRef.current.has(s.id))
+      .forEach((submission) => {
+        const bounty = bounties.find(
+          (b) => String(b.id) === String(submission.bountyId),
+        );
+        const reward = Number(bounty?.reward || submission.reward || 0);
+        const withinCap = !spendingCap || reward <= spendingCap;
+        const previewOk = !!(
+          submission.description ||
+          submission.notes ||
+          submission.deliveryLink ||
+          submission.title
+        );
+
+        processedRef.current.add(submission.id);
+
+        if (!withinCap) {
+          setAgentLog((prev) => [
+            `⚠ Client agent: "${submission.title}" exceeds cap (${reward} > ${spendingCap} USDC) — human intervention required.`,
+            ...prev,
+          ]);
+          return;
+        }
+        if (!previewOk) {
+          setAgentLog((prev) => [
+            `ℹ Client agent: "${submission.title}" needs human review (empty preview).`,
+            ...prev,
+          ]);
+          return;
+        }
+        setAgentLog((prev) => [
+          `🤖 Client agent approved "${submission.title}" (reward ${reward} ≤ cap ${spendingCap}, preview OK) — settling x402 payment…`,
+          ...prev,
+        ]);
+        onApproveAndPay(submission.id)
+          .then((result) => {
+            if (result && result.success === false) {
+              setAgentLog((prev) => [
+                `✗ Payment failed for "${submission.title}": ${result.error || "unknown error"}. Human review needed.`,
+                ...prev,
+              ]);
+            } else {
+              setAgentLog((prev) => [
+                `✓ Client agent paid "${submission.title}" via x402 — receipt available.`,
+                ...prev,
+              ]);
+            }
+          })
+          .catch((error) => {
+            setAgentLog((prev) => [
+              `✗ Payment failed for "${submission.title}": ${error?.message || "unknown error"}. Human review needed.`,
+              ...prev,
+            ]);
+          });
+      });
+  }, [scopedSubmissions, autoApprove, backendOnline, bounties, spendingCap, onApproveAndPay]);
 
   function handleApprove(submissionId) {
     const result = onApproveSubmission(submissionId);
@@ -287,6 +379,30 @@ function Submissions({
             {filter.label}
           </button>
         ))}
+      </div>
+      <div className="agent-panel">
+        <label className="agent-toggle">
+          <input
+            type="checkbox"
+            checked={autoApprove}
+            onChange={(e) => setAutoApprove(e.target.checked)}
+          />
+          <span>
+            <strong>Client agent auto-approve</strong> — automatically approve &
+            settle real x402 payments for submissions within the {spendingCap} USDC
+            cap when the preview passes review. Above-cap tasks and offline
+            backends require human intervention.
+          </span>
+        </label>
+        {agentLog.length > 0 && (
+          <div className="agent-log">
+            {agentLog.slice(0, 6).map((entry, idx) => (
+              <div key={idx} className="agent-log-entry">
+                {entry}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       {notice && <div className="task-notice">{notice}</div>}
       {visibleSubmissions.length === 0 ? (

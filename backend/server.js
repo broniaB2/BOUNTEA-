@@ -142,7 +142,11 @@ app.get("/api/tasks/:id", (req, res) => {
   res.json(t);
 });
 app.post("/api/tasks", (req, res) => {
-  const { title, description, category, reward, deadline, business } = req.body || {};
+  const body = req.body || {};
+  const { title, description, category, reward, deadline, business, acceptanceCriteria } = body;
+  const skills = Array.isArray(body.skills) && body.skills.length
+    ? body.skills
+    : [category || "General"];
   const r = Number(reward);
   if (!title || !Number.isFinite(r) || r <= 0 || r > SPENDING_CAP) {
     return res.status(400).json({ error: `reward must be >0 and <= ${SPENDING_CAP}` });
@@ -156,7 +160,8 @@ app.post("/api/tasks", (req, res) => {
     deadline: deadline || "3 days",
     business: business || "Your Business",
     createdBy: (req.body && req.body.createdBy) || business || "demo@bountea.app",
-    skills: [category || "General"],
+    skills,
+    acceptanceCriteria: acceptanceCriteria || "",
     network: "Stellar Testnet",
     status: "OPEN",
     claimedBy: null,

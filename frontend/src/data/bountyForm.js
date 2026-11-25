@@ -4,4 +4,5 @@ export const emptyBountyForm = {
   category: "Research",
   reward: "",
   deadline: "",
+  acceptanceCriteria: "",
 };

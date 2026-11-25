@@ -49,6 +49,13 @@ function BountyForm({ form, onChange, onSubmit, onClose }) {
             <option>Data</option>
             <option>Content</option>
           </select>
+          <label htmlFor="task-acceptance">Review instructions (client agent acceptance criteria)</label>
+          <textarea
+            id="task-acceptance"
+            placeholder="What must the deliverable contain for the client agent to approve? e.g. 'All 20 items translated into Luganda, no machine-translation artifacts.'"
+            value={form.acceptanceCriteria || ""}
+            onChange={updateField("acceptanceCriteria")}
+          />
           <div className="form-row">
             <div>
               <label htmlFor="task-reward">Reward (USDC)</label>

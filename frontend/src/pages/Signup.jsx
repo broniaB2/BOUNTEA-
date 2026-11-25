@@ -2,6 +2,7 @@ import { useState } from "react";
 import { BriefcaseBusiness, Eye, EyeOff, Sparkles, UserRound } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { mockSignUp } from "../services/authService";
+import { WORKER_SKILLS } from "../data/workerSkills";
 
 const initialForm = {
   name: "",
@@ -9,6 +10,7 @@ const initialForm = {
   password: "",
   confirmPassword: "",
   role: "worker",
+  skills: [],
 };
 
 function Signup({ onLogin }) {
@@ -25,6 +27,16 @@ function Signup({ onLogin }) {
     };
   }
 
+  function toggleSkill(skill) {
+    setForm((previous) => ({
+      ...previous,
+      skills: previous.skills.includes(skill)
+        ? previous.skills.filter((item) => item !== skill)
+        : [...previous.skills, skill],
+    }));
+    setError("");
+  }
+
   function handleSubmit(event) {
     event.preventDefault();
     if (form.password.length < 8) {
@@ -36,7 +48,18 @@ function Signup({ onLogin }) {
       return;
     }
 
-    const result = mockSignUp(form);
+    if (form.role === "worker" && form.skills.length === 0) {
+      setError("Select at least one skill so your agent can match tasks.");
+      return;
+    }
+
+    const result = mockSignUp({
+      name: form.name,
+      email: form.email,
+      password: form.password,
+      role: form.role,
+      skills: form.role === "worker" ? form.skills : [],
+    });
     if (!result.success) {
       setError(result.error);
       return;
@@ -95,6 +118,23 @@ function Signup({ onLogin }) {
               <span><strong>Business</strong><small>Post bounties and review work</small></span>
             </label>
           </fieldset>
+          {form.role === "worker" && (
+            <fieldset className="skill-options">
+              <legend>Worker agent skills (used to match tasks)</legend>
+              <div className="skill-grid">
+                {WORKER_SKILLS.map((skill) => (
+                  <label key={skill} className={`skill-chip ${form.skills.includes(skill) ? "selected" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={form.skills.includes(skill)}
+                      onChange={() => toggleSkill(skill)}
+                    />
+                    {skill}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
           <button type="submit" className="primary-button auth-submit">Create account</button>
         </form>
         <p className="auth-switch">Already have an account? <Link to="/login">Log in</Link></p>

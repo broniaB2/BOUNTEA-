@@ -224,20 +224,30 @@ instances. Configuration used:
   sleep takes ~30 s. Hit `/api/health` before a demo. Local dev still works with
   `VITE_API_BASE` unset (Vite proxies `/api` → `http://localhost:4021`).
 
-## 12. Roadmap — next phase (agent autonomy)
+## 12. Agent autonomy — `feature/agent-autonomy` (local branch, not deployed)
 
-The blueprint calls for agents to do most of the work, with minimal human intervention.
-Planned after the working prototype is pushed:
+> The live deployment still runs `main` (the MVP described above). The work below is on
+> the local `feature/agent-autonomy` branch. It has **not** been pushed to GitHub or
+> deployed, so the live system is untouched.
 
-- **Worker agent skills** — capture expertise at signup (translation, data entry, Excel,
-  research, content); the agent filters available bounties by matching skills.
-- **Worker agent go-ahead** — agent spots a matching bounty and alerts the human for a
-  "go ahead" before claiming/starting.
-- **Client agent auto-approve** — automatically approve & pay when reward ≤ cap and the
-  preview passes review; **above-cap triggers a warning requiring human intervention**.
-- **Review instructions** — client agent uses explicit acceptance criteria (from the
-  brief) to judge the submitted preview before approving.
-- Branch → test → merge workflow for these features.
+- **Worker skills at signup** — workers pick skills (translation, Luganda, data entry,
+  Excel, research, content writing, …), stored in the mock profile.
+- **Skill-based matching** — the worker dashboard shows **Worker agent suggestions**:
+  open bounties whose skills/category match the worker's skills, with a **Give go-ahead**
+  button that claims the task. The human stays in the loop before the agent acts.
+- **Review instructions** — businesses add explicit acceptance criteria when posting a
+  bounty; those instructions are shown in the client review panel.
+- **Client agent auto-approve** — a toggle on **Submissions** lets the agent approve and
+  settle **real x402 payments** automatically for submissions with reward ≤ 12 USDC and a
+  non-empty preview. Decisions and payment results appear in an **agent log**.
+- **Safety rails** — above-cap submissions are skipped with a warning requiring human
+  intervention; when the backend is offline the agent does **not** auto-approve, so it can
+  never produce a mock/simulated payment. Manual review buttons remain available.
+- Backend `POST /api/tasks` now accepts `skills` and `acceptanceCriteria`.
+
+Verified locally: `npm run lint` and `npm run build` pass; worker signup → suggestions →
+go-ahead claim and the client agent panel were exercised in a browser. Live x402 payments
+are unchanged. Merge into `main` and redeploy only after the submission is handed in.
 
 ## 13. Notes & limitations (MVP)
 

@@ -8,6 +8,30 @@ export function getBountyById(bounties, id) {
   return bounties.find((bounty) => String(bounty.id) === String(id));
 }
 
+export function workerSkillList(user) {
+  return Array.isArray(user?.skills) ? user.skills : [];
+}
+
+export function bountyMatchesSkills(bounty, skills) {
+  const list = Array.isArray(skills) ? skills : [];
+  if (!list.length) return false;
+  const bountySkills = (bounty.skills || []).map((s) => String(s).toLowerCase());
+  const category = String(bounty.category || "").toLowerCase();
+  return list.some((skill) => {
+    const s = String(skill).toLowerCase();
+    return bountySkills.includes(s) || category === s;
+  });
+}
+
+export function suggestedBountiesForWorker(bounties, user) {
+  if (user?.role !== "worker") return [];
+  const skills = workerSkillList(user);
+  if (!skills.length) return [];
+  return (bounties || []).filter(
+    (bounty) => bounty.status === "OPEN" && bountyMatchesSkills(bounty, skills),
+  );
+}
+
 export function filterBounties(bounties, search, category) {
   const normalizedSearch = search.trim().toLowerCase();
 
@@ -28,6 +52,7 @@ export function createMockBounty(form, user) {
     ...form,
     reward: Number(form.reward),
     skills: [form.category],
+    acceptanceCriteria: form.acceptanceCriteria || "",
     business: user?.name || "Your Business",
     createdBy: user?.email,
     network: "Stellar Testnet",

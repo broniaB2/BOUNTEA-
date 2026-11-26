@@ -78,6 +78,31 @@ function App() {
     };
   }, []);
 
+  // Poll the backend so workers see bounties created in real time without a refresh.
+  useEffect(() => {
+    if (!backendOnline) return undefined;
+    const refresh = async () => {
+      try {
+        const [tasks, rcpts] = await Promise.all([
+          api.listTasks(),
+          api.listReceipts().catch(() => []),
+        ]);
+        if (Array.isArray(tasks)) {
+          setBounties(tasks);
+          const derived = tasks
+            .filter((task) => task.submission)
+            .map((task) => task.submission);
+          setSubmissions(derived);
+        }
+        if (Array.isArray(rcpts)) setReceipts(rcpts);
+      } catch {
+        // Keep the current state if the backend is temporarily unreachable.
+      }
+    };
+    const timer = setInterval(refresh, 8000);
+    return () => clearInterval(timer);
+  }, [backendOnline]);
+
   const filteredBounties = useMemo(
     () => filterBounties(bounties, search, category),
     [bounties, search, category],
@@ -142,19 +167,25 @@ function App() {
     const started = startMockTask([current], id);
     if (started.success) current = started.bounty;
 
-    // Ask the server-side worker agent (Gemini) to do the work. Fall back to the
-    // offline draft if Gemini is unavailable — never block the demo on it.
+    // Ask the server-side worker agent (Gemini) to do the work, but enforce a
+    // 2-second time limit so agents stay competitive. Fall back to the offline
+    // draft if Gemini is unavailable or too slow — never block the demo on it.
     let deliverable = buildAgentDeliverable(current);
     let source = "Offline draft agent";
     if (backendOnline) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
       try {
-        const generated = await api.generateAgentWork(id);
+        const generated = await api.generateAgentWork(id, { signal: controller.signal });
         if (generated?.deliverable) {
           deliverable = generated.deliverable;
           source = "Gemini worker agent";
         }
       } catch {
-        // Gemini unavailable — keep the structured draft.
+        // Gemini unavailable or too slow — keep the structured draft.
+        source = "Offline draft agent (fast fallback)";
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
     deliverable = {
@@ -384,7 +415,7 @@ function App() {
       // Mirror into mock submissions state.
       setSubmissions((previous) =>
         previous.map((item) =>
-          item.id === submissionId ? { ...item, status: "APPROVED", paymentStatus: "AWAITING_PAYMENT" } : item,
+          item.id === submissionId ? { ...item, status: "APPROVED", paymentStatus: "PAID" } : item,
         ),
       );
       return { success: true, receipt: res.receipt };

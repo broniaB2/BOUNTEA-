@@ -44,13 +44,15 @@ export const api = {
         business: user?.name || "Your Business",
         createdBy: user?.email || user?.name || "demo@bountea.app",
         acceptanceCriteria: form.acceptanceCriteria || "",
+        workInput: form.workInput || "",
         skills: [form.category],
       }),
     }),
-  generateAgentWork: (id) =>
+  generateAgentWork: (id, options = {}) =>
     request("/api/agent/generate-work", {
       method: "POST",
       body: JSON.stringify({ taskId: id }),
+      signal: options.signal,
     }),
   claimTask: (id, worker) =>
     request(`/api/tasks/${id}/claim`, {

@@ -1,4 +1,5 @@
 import { Plus, X } from "lucide-react";
+import { WORKER_SKILLS } from "../../data/workerSkills";
 
 function BountyForm({ form, onChange, onSubmit, onClose }) {
   const updateField = (field) => (event) =>
@@ -38,16 +39,24 @@ function BountyForm({ form, onChange, onSubmit, onClose }) {
             value={form.description}
             onChange={updateField("description")}
           />
+          <label htmlFor="task-work-input">Work input / source data (optional)</label>
+          <textarea
+            id="task-work-input"
+            placeholder="Paste the data, text, or link the worker should process. Leave blank if the task has no input."
+            value={form.workInput || ""}
+            onChange={updateField("workInput")}
+          />
           <label htmlFor="task-category">Category</label>
           <select
             id="task-category"
             value={form.category}
             onChange={updateField("category")}
           >
-            <option>Research</option>
-            <option>Translation</option>
-            <option>Data</option>
-            <option>Content</option>
+            {WORKER_SKILLS.map((skill) => (
+              <option key={skill} value={skill}>
+                {skill}
+              </option>
+            ))}
           </select>
           <label htmlFor="task-acceptance">Review instructions (client agent acceptance criteria)</label>
           <textarea

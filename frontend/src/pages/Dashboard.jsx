@@ -90,7 +90,14 @@ function Dashboard({
     if (!onRunWorkerAgent) return;
     setWorkingId(id);
     try {
-      await onRunWorkerAgent(id);
+      const result = await onRunWorkerAgent(id);
+      if (result?.success) {
+        window.alert(
+          `Agent finished and submitted: ${result.submission?.title || "the task"}. Check Submissions for review and payment.`,
+        );
+      } else if (result?.error) {
+        window.alert(`Agent could not finish the task: ${result.error}`);
+      }
     } finally {
       setWorkingId(null);
     }

@@ -1,7 +1,10 @@
+import { WORKER_SKILLS } from "./workerSkills";
+
 export const emptyBountyForm = {
   title: "",
   description: "",
-  category: "Research",
+  category: WORKER_SKILLS[0],
+  workInput: "",
   reward: "",
   deadline: "",
   acceptanceCriteria: "",

@@ -53,6 +53,7 @@ export function createMockBounty(form, user) {
     reward: Number(form.reward),
     skills: [form.category],
     acceptanceCriteria: form.acceptanceCriteria || "",
+    workInput: form.workInput || "",
     business: user?.name || "Your Business",
     createdBy: user?.email,
     network: "Stellar Testnet",

@@ -19,10 +19,13 @@ function formatStatus(status) {
   return status.replace(/_/g, " ");
 }
 
-function getStatusLabel(status) {
-  return status === "APPROVED"
-    ? "APPROVED — Awaiting Payment"
-    : formatStatus(status);
+function getStatusLabel(status, paymentStatus) {
+  if (status === "APPROVED") {
+    return paymentStatus === "PAID"
+      ? "APPROVED — Paid"
+      : "APPROVED — Awaiting Payment";
+  }
+  return formatStatus(status);
 }
 
 function SubmissionDetails({
@@ -114,7 +117,7 @@ function SubmissionDetails({
           <span>Status</span>
           <strong>
             <span className={`status-tag status-${submission.status.toLowerCase()}`}>
-              {getStatusLabel(submission.status)}
+              {getStatusLabel(submission.status, submission.paymentStatus)}
             </span>
           </strong>
         </div>
@@ -426,7 +429,7 @@ function Submissions({
                     <span
                       className={`status-tag status-${submission.status.toLowerCase()}`}
                     >
-                      {getStatusLabel(submission.status)}
+                      {getStatusLabel(submission.status, submission.paymentStatus)}
                     </span>
                   </div>
                   <h2>{submission.title || "Untitled submission"}</h2>

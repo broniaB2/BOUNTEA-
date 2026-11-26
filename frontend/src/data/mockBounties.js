@@ -17,7 +17,7 @@ export const initialBounties = [
     title: "Clean and organise sales records",
     description:
       "Organise monthly sales records and prepare a structured spreadsheet.",
-    category: "Data",
+    category: "Data Entry",
     reward: 12,
     deadline: "3 days",
     skills: ["Excel", "Data Entry"],
@@ -42,7 +42,7 @@ export const initialBounties = [
     id: 4,
     title: "Create social media product captions",
     description: "Write engaging captions for ten product posts.",
-    category: "Content",
+    category: "Content Writing",
     reward: 8,
     deadline: "2 days",
     skills: ["Writing", "Social Media"],
@@ -52,10 +52,6 @@ export const initialBounties = [
   },
 ];
 
-export const bountyCategories = [
-  "All",
-  "Translation",
-  "Data",
-  "Research",
-  "Content",
-];
+import { WORKER_SKILLS } from "./workerSkills";
+
+export const bountyCategories = ["All", ...WORKER_SKILLS];

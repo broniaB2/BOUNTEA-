@@ -164,7 +164,7 @@ app.post("/api/agent/generate-work", async (req, res) => {
 
 app.post("/api/tasks", (req, res) => {
   const body = req.body || {};
-  const { title, description, category, reward, deadline, business, acceptanceCriteria } = body;
+  const { title, description, category, reward, deadline, business, acceptanceCriteria, workInput } = body;
   const skills = Array.isArray(body.skills) && body.skills.length
     ? body.skills
     : [category || "General"];
@@ -183,6 +183,7 @@ app.post("/api/tasks", (req, res) => {
     createdBy: (req.body && req.body.createdBy) || business || "demo@bountea.app",
     skills,
     acceptanceCriteria: acceptanceCriteria || "",
+    workInput: workInput || "",
     network: "Stellar Testnet",
     status: "OPEN",
     claimedBy: null,
@@ -358,7 +359,7 @@ app.post("/api/tasks/:id/approve", async (req, res) => {
   t.status = "COMPLETED";
   t.txHash = receipt.txHash;
   if (t.submission) {
-    t.submission = { ...t.submission, status: "APPROVED", paymentStatus: "AWAITING_PAYMENT" };
+    t.submission = { ...t.submission, status: "APPROVED", paymentStatus: "PAID" };
   }
 
   res.json({ success: true, receipt, task: t });

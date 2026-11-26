@@ -26,6 +26,7 @@ export function buildAgentDeliverable(bounty) {
   const description = [
     `Completed by the BOUNTEA worker agent for "${bounty?.title || "this task"}".`,
     bounty?.description ? `Brief: ${bounty.description}` : "",
+    bounty?.workInput ? `Work input provided: ${bounty.workInput}` : "",
     criteria
       ? `Acceptance criteria addressed: ${criteria}`
       : "Deliverable follows the task brief.",

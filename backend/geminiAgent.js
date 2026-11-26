@@ -43,6 +43,7 @@ Complete the task below and produce the ACTUAL deliverable content, not a descri
 Task id: ${task.id}
 Title: ${task.title}
 Brief: ${task.description || "(no additional brief)"}
+Work input / source data: ${task.workInput ? task.workInput : "(none provided — invent representative content that fits the brief)"}
 Category: ${task.category || "General"}
 Skills required: ${(task.skills || []).join(", ") || "General"}
 Acceptance criteria: ${criteria || "Deliverable must match the task brief."}
